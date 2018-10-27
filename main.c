@@ -8,79 +8,86 @@ static const int  PASSCHARS_SIZE = sizeof(PASSCHARS) -1; // because 1 char is 1 
 static const int  MAX_WORD_LENGTH = 4;
 
 // helper
-int compareHashes(char* inHash, char* guess) {
+int compare_hashes(char* in_hash, char* guess) {
 
 	char salt[13] = "$1$abcdefgh$"; // placeholder, we replace abcde... in the loop below
+
 	for(int i = 3; i < 11; i++) {
-		salt[i] = inHash[i];
+		salt[i] = in_hash[i];
 	}
 
-	char* outHash = crypt(guess, salt);
+	char* out_hash = crypt(guess, salt);
 
-	return strncmp(inHash, outHash, sizeof(char)*34); // is 0 if they match
+	return strncmp(in_hash, out_hash, sizeof(char)*34); // is 0 if they match
 }
 
 // dictionary search
-int guessFromDictionary(char* hash) {
+int guess_from_dictionary(char* hash) {
 
-	FILE* dictionaryFile = fopen("./dictionary.txt","r");
+	FILE* dictionary_file = fopen("./dictionary.txt","r");
 	
-	char dictionaryWord[60];
+	char word[60];
 
-	while(fscanf(dictionaryFile, "%s", dictionaryWord) != EOF) {
-
-		printf("Trying word... %s\n", dictionaryWord);
-
-		if(compareHashes(hash, dictionaryWord) == 0) {
-			printf("SUCCESS! Match found: %s\n", dictionaryWord);
-			fclose(dictionaryFile);
-			return 1;
+	while(fscanf(dictionary_file, "%s", word) != EOF) {
+		printf("1Trying word... %s\n", word);
+ 
+		if(compare_hashes(hash, word) == 0) {
+			printf("SUCCESS! Match found: %s\n", word);
+			fclose(dictionary_file);
+			return 0;
 		}
 
 	}
 
-	fclose(dictionaryFile);
+	fclose(dictionary_file);
 	return -1;
 }
 
 // recursive call for bruteforce
-int guess(char* combination, int index, char* hash, int wordlength) {
+int guess(char* word, int char_index, char* hash, int word_length) {
 
-	if(index < wordlength) {
+	if(char_index < word_length) {
 		for(int i = 0; i < PASSCHARS_SIZE; i++) {
-			combination[index] = PASSCHARS[i];		
+			word[char_index] = PASSCHARS[i];		
 
-			if(guess(combination, index + 1, hash, wordlength) == 1) {
-				return 1; // we're done, stop looking
+			if(guess(word, char_index + 1, hash, word_length) == 0) {
+				return 0; // we're done, stop looking
 			}
 		}
 	}
 	else {
 		for(int i = 0; i < PASSCHARS_SIZE; i++) {
-			combination[index] = PASSCHARS[i];	
-			printf("Trying %s\n", combination);
+			word[char_index] = PASSCHARS[i];	
+			printf("2Trying word... %s\n", word);
 
-			if(compareHashes(hash, combination) == 0) {
-				printf("SUCCESS! Match found: %s\n", combination);
-				return 1; // you did it!
+			if(compare_hashes(hash, word) == 0) {
+				printf("SUCCESS! Match found: %s\n", word);
+				return 0;
 			}
 		}
 	}
 
-	return 0; // not found :(
+	return -1; // not found :(
 
 }
 
 // bruteforce every character combination
-void guessAllCombinations(char* hash) {
+int guess_all_combinations(char* hash) {
 
 	char combinations[MAX_WORD_LENGTH +1];
 
 	for(int i = 0; i < MAX_WORD_LENGTH; i++) {
 		//memset(combinations, 0, MAX_WORD_LENGTH + 1);
-		if(guess(combinations, 0, hash, i) == 1) return;
+		if(guess(combinations, 0, hash, i) == 0) return 0; // match found
 	}
 
+	return -1; // no hits
+
+}
+
+int guess_with_iteration(char* hash) {
+	// TODO. Maybe. I've read iteration performs better?
+	return -1;
 }
 
 
@@ -95,11 +102,13 @@ int main(int argc, char** argv) {
 	}
 
 	// start with dictionary
-	guessFromDictionary(hash);
+	if(guess_from_dictionary(hash) == 0)
+		return 0;
 	
 	// nothing? then try brute force
-	//guessAllCombinations(hash);
+	if(guess_all_combinations(hash) == 0)
+		return 0;
 
-	return 0;
+	return -1;
 
 }
