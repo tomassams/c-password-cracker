@@ -24,7 +24,7 @@ int compare_hashes(char* in_hash, char* guess) {
 // dictionary search
 int guess_from_dictionary(char* hash) {
 
-	FILE* dictionary_file = fopen("./dictionary.txt","r");
+	FILE* dictionary_file = fopen("./dicts/dictionary.txt","r");
 	
 	char word[60];
 
@@ -106,8 +106,8 @@ int main(int argc, char** argv) {
 		return 0;
 	
 	// nothing? then try brute force
-	if(guess_all_combinations(hash) == 0)
-		return 0;
+	//if(guess_all_combinations(hash) == 0)
+	//	return 0;
 
 	return -1;
 
