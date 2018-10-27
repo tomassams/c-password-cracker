@@ -39,37 +39,35 @@ int dictionaryGuess(char* hash) {
 }
 
 // recursively iterate through all passchar combinations
-void iterate(char* combination, int index, char* hash) {
+int iterate(char* combination, int index, char* hash) {
 
 char test[4] = "aabb";
 
 	if(index < (MAX_LENGTH - 1)) {
-		for(int i = 0; i < 2; i++) {
-			combination[index] = PASSCHARS[i];
-			iterate(combination, index + 1, hash);
+		for(int i = 0; i < PASSCHARS_SIZE; i++) {
+			combination[index] = PASSCHARS[i];		
+
+			if(iterate(combination, index + 1, hash) == 1) {
+				return 1;
+			}
 		}
 	}
 	else {
-		for(int i = 0; i < 2; i++) {
+		for(int i = 0; i < PASSCHARS_SIZE; i++) {
 			combination[index] = PASSCHARS[i];	
 			printf("Trying %s\n", combination);
 
 			if(strncmp(test, combination, sizeof(char)*4) == 0) {
 				printf("Found! %s\n", combination);
-				return;
+				return 1;
 			}
 		}
+		return 0;
 	}
 
 }
 
-
 void guessAllCombinations(char* hash) {
-	char salt[13] = "$1$abcefgh$";
-
-	for(int i = 3; i < 11; i++) {
-		salt[i] = hash[i];
-	}
 
 	char combinations[MAX_LENGTH +1];
 
