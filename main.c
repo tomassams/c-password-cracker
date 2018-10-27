@@ -1,7 +1,9 @@
+#define _GNU_SOURCE
+#include <crypt.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <crypt.h>
 
 static const char PASSCHARS[] = "abcdefghikjlmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890+\"#&/()=?!@$|[]|{}";
 static const int  PASSCHARS_SIZE = sizeof(PASSCHARS) -1; // because 1 char is 1 byte
@@ -9,6 +11,8 @@ static const int  MAX_WORD_LENGTH = 4;
 
 // helper
 int compare_hashes(char* in_hash, char* guess) {
+	struct crypt_data data;
+	data.initialized = 0;
 
 	char salt[13] = "$1$abcdefgh$"; // placeholder, we replace abcde... in the loop below
 
@@ -16,7 +20,7 @@ int compare_hashes(char* in_hash, char* guess) {
 		salt[i] = in_hash[i];
 	}
 
-	char* out_hash = crypt(guess, salt);
+	char* out_hash = crypt_r(guess, salt, &data);
 
 	return strncmp(in_hash, out_hash, sizeof(char)*34); // is 0 if they match
 }
@@ -84,12 +88,6 @@ int guess_all_combinations(char* hash) {
 	return -1; // no hits
 
 }
-
-int guess_with_iteration(char* hash) {
-	// TODO. Maybe. I've read iteration performs better?
-	return -1;
-}
-
 
 int main(int argc, char** argv) {
 	
