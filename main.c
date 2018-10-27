@@ -39,16 +39,21 @@ int dictionaryGuess(char* hash) {
 }
 
 // recursively iterate through all passchar combinations
-int iterate(char* combination, int index, char* hash) {
+int iterate(char* combination, int index, char* hash, int wordlength) {
 
-char test[4] = "aabb";
+char salt[13] = "$1$abcefgh$"; // placeholder.. todo: should this be 13 or 12? works either way
 
-	if(index < (MAX_LENGTH - 1)) {
+// extract the salt from the encrypted input hash
+for(int i = 3; i < 11; i++) {
+	salt[i] = hash[i];
+}
+
+	if(index < wordlength) {
 		for(int i = 0; i < PASSCHARS_SIZE; i++) {
 			combination[index] = PASSCHARS[i];		
 
-			if(iterate(combination, index + 1, hash) == 1) {
-				return 1;
+			if(iterate(combination, index + 1, hash, wordlength) == 1) {
+				return 1; // we're done, stop looking
 			}
 		}
 	}
@@ -56,14 +61,16 @@ char test[4] = "aabb";
 		for(int i = 0; i < PASSCHARS_SIZE; i++) {
 			combination[index] = PASSCHARS[i];	
 			printf("Trying %s\n", combination);
+			char* encrypted=crypt(combination,salt);
 
-			if(strncmp(test, combination, sizeof(char)*4) == 0) {
+			if(strncmp(hash, encrypted, sizeof(char)*34) == 0) {
 				printf("Found! %s\n", combination);
-				return 1;
+				return 1; // you did it!
 			}
 		}
-		return 0;
 	}
+
+	return 0; // not found :(
 
 }
 
@@ -71,8 +78,11 @@ void guessAllCombinations(char* hash) {
 
 	char combinations[MAX_LENGTH +1];
 
-	memset(combinations, 0, MAX_LENGTH + 1);
-	iterate(combinations, 0, hash);
+	for(int i = 0; i < MAX_LENGTH; i++) {
+		memset(combinations, 0, MAX_LENGTH + 1);
+		if(iterate(combinations, 0, hash, i) == 1) return;
+	}
+
 }
 
 
