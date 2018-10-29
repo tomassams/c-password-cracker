@@ -6,9 +6,7 @@
 #include <crypt.h>
 #include <pthread.h>
 
-static const char PASSCHARS[] = "abcdefghikjlmnopqrstuvwxyz"
-								"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-								"1234567890+\"#&/()=?!@$|[]|{}";
+static const char PASSCHARS[] = "abcdefghikjlmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890+\"#&/()=?!@$|[]|{}";
 static const int  PASSCHARS_SIZE = sizeof(PASSCHARS) -1; // because 1 char is 1 byte
 static const int  MAX_WORD_LENGTH = 4;
 
@@ -43,14 +41,14 @@ void* dict_thread_runner(void* arg) {
 
 	while(fscanf(args->dictionary_file, "%s", word) != EOF) {
 
-		if(found == 1) pthread_exit(&found); // exit other threads if match is found already
+		if(found == 1) pthread_exit(&found); // exit if match is found already
 
 		printf("Thread %d: Trying word... %s\n",args->thread_id, word);
  
 		if(compare_hashes(args->hash, word) == 0) {
 			printf("Thread %d: SUCCESS! Match found: %s\n", args->thread_id, word);
 			found = 1;
-			pthread_exit(0);
+			pthread_exit(&found);
 		}
 
 	}
@@ -98,7 +96,7 @@ int recursive_guess(char* word, int char_index, char* hash, int word_length) {
 		printf("3Trying word... %s\n", word);
 
 		if(compare_hashes(hash, word) == 0) { // base case, we're done
-			printf("GREAT!\n");
+			printf("SUCCESS! Match found: %s\n", word);
 			return 0;
 		} 
 		else if(char_index < word_length) { // self call but only until reach word length
@@ -115,10 +113,10 @@ int recursive_guess(char* word, int char_index, char* hash, int word_length) {
 // bruteforce every character combination
 int guess_all_combinations(char* hash, int num_threads) {
 
-	char combinations[MAX_WORD_LENGTH +1];
+	char word[MAX_WORD_LENGTH +1];
 
 	for(int i = 0; i < MAX_WORD_LENGTH; i++) {
-		int guess = recursive_guess(combinations, 0, hash, i);
+		int guess = recursive_guess(word, 0, hash, i);
 		
 		if(guess == 0) return 0; // we're done
 	}
@@ -130,9 +128,10 @@ int guess_all_combinations(char* hash, int num_threads) {
 int main(int argc, char** argv) {
 
 	// validate input
+	// TODO: implement dictionary_file_path as argument
 	char* hash = argv[1];
-	if(argc <= 1 || argc > 3 || strlen(hash) != 34) {
-		printf("Usage: %s <hash> <num_threads>\n", argv[0]);
+	if(argc <= 1 || argc > 4 || strlen(hash) != 34) {
+		printf("Usage: %s <hash> <num_threads> <dictionary_file_path>\n", argv[0]);
 		return -1;
 	}
 
