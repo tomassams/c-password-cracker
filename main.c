@@ -6,7 +6,9 @@
 #include <crypt.h>
 #include <pthread.h>
 
-static const char PASSCHARS[] = "abcdefghikjlmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890+\"#&/()=?!@$|[]|{}";
+static const char PASSCHARS[] = "abcdefghikjlmnopqrstuvwxyz"
+								"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+								"1234567890+\"#&/()=?!@$|[]|{}";
 static const int  PASSCHARS_SIZE = sizeof(PASSCHARS) -1; // because 1 char is 1 byte
 static const int  MAX_WORD_LENGTH = 4;
 
@@ -41,7 +43,7 @@ void* dict_thread_runner(void* arg) {
 
 	while(fscanf(args->dictionary_file, "%s", word) != EOF) {
 
-		if(found == 1) pthread_exit(0); // make the other threads exit if match is found already
+		if(found == 1) pthread_exit(&found); // exit other threads if match is found already
 
 		printf("Thread %d: Trying word... %s\n",args->thread_id, word);
  
@@ -89,41 +91,36 @@ int guess_from_dictionary(char* hash, int num_threads) {
 }
 
 // recursive call for bruteforce
-int recursive_gues(char* word, int char_index, char* hash, int word_length) {
+int recursive_guess(char* word, int char_index, char* hash, int word_length) {
 
-	if(char_index < word_length) {
-		for(int i = 0; i < PASSCHARS_SIZE; i++) {
-			word[char_index] = PASSCHARS[i];		
+	for(int i = 0; i < PASSCHARS_SIZE; i++) {
+		word[char_index] = PASSCHARS[i];
+		printf("3Trying word... %s\n", word);
 
-			if(recursive_gues(word, char_index + 1, hash, word_length) == 0) {
-				return 0; // we're done, stop looking
-			}
-		}
-	}
-	else {
-		for(int i = 0; i < PASSCHARS_SIZE; i++) {
-			word[char_index] = PASSCHARS[i];	
-			printf("2Trying word... %s\n", word);
+		if(compare_hashes(hash, word) == 0) { // base case, we're done
+			printf("GREAT!\n");
+			return 0;
+		} 
+		else if(char_index < word_length) { // self call but only until reach word length
+			int guess = recursive_guess(word, char_index + 1, hash, word_length);
 
-			if(compare_hashes(hash, word) == 0) {
-				printf("SUCCESS! Match found: %s\n", word);
-				return 0;
-			}
+			if(guess == 0) return 0; // we're done
 		}
 	}
 
-	return -1; // not found :(
+	return -1; // no hits
 
 }
 
 // bruteforce every character combination
-int guess_all_combinations(char* hash) {
+int guess_all_combinations(char* hash, int num_threads) {
 
 	char combinations[MAX_WORD_LENGTH +1];
 
 	for(int i = 0; i < MAX_WORD_LENGTH; i++) {
-		//memset(combinations, 0, MAX_WORD_LENGTH + 1);
-		if(recursive_gues(combinations, 0, hash, i) == 0) return 0; // match found
+		int guess = recursive_guess(combinations, 0, hash, i);
+		
+		if(guess == 0) return 0; // we're done
 	}
 
 	return -1; // no hits
@@ -145,12 +142,12 @@ int main(int argc, char** argv) {
 		num_threads = atoi(argv[2]);
 	}
 
-	// start with dictionary
+	// start guessing from dictionary
 	if(guess_from_dictionary(hash, num_threads) == 0)
 		return 0;
 	
 	// nothing? then try brute force
-	if(guess_all_combinations(hash) == 0)
+	if(guess_all_combinations(hash, num_threads) == 0)
 		return 0;
 
 	printf("No matches found!\n");
