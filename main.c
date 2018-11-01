@@ -1,5 +1,13 @@
 #define _GNU_SOURCE
 
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include <unistd.h>
+
+#include <sys/mman.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -60,7 +68,7 @@ int guess_from_dictionary(char* hash, int num_threads) {
 
 	FILE* dictionary_file = fopen("./dicts/dictionary.txt","r");
 	if(dictionary_file == NULL) {
-		printf("Error reading from dictionary file!\n");
+		printf("Error: coudln't read dictionary file. Aborting..\n");
 		return -1;
 	}
 
@@ -83,7 +91,8 @@ int guess_from_dictionary(char* hash, int num_threads) {
 
 	fclose(dictionary_file);
 
-	if(found == 1) return 0;
+	if(found == 1) 
+		return 0;
 
 	return -1;
 }
@@ -102,7 +111,8 @@ int recursive_guess(char* word, int char_index, char* hash, int word_length) {
 		else if(char_index < word_length) { // self call but only until reach word length
 			int guess = recursive_guess(word, char_index + 1, hash, word_length);
 
-			if(guess == 0) return 0; // we're done
+			if(guess == 0) 
+				return 0; // we're done
 		}
 	}
 
@@ -125,6 +135,103 @@ int guess_all_combinations(char* hash, int num_threads) {
 
 }
 
+struct d_mmap_struct {
+	int thread_id;
+	int read_from;
+	int read_to;
+	char* mmapped_str;
+	char* hash;
+};
+
+void* dict_mmap_thread_runner(void* arg) {
+
+	struct d_mmap_struct* args = (struct d_mmap_struct*) arg;
+
+	char word[60] = { 0 };
+	int word_char = 0;
+
+	// make sure we dont start our thread in the middle of a word
+	while(args->thread_id != 0 && args->mmapped_str[args->read_from] != '\n') {
+		args->read_from--;
+	}
+
+	// go through char for char
+	for(int i = args->read_from; i < (args->read_from + args->read_to); i++) {
+		if(found == 1) pthread_exit(&found); 
+
+		// map chars to word
+		word[word_char] = args->mmapped_str[i];
+
+		// stop mapping when we reach a linebreak
+		if(args->mmapped_str[i] == '\n') {	
+			word[word_char] = '\0';
+			word_char = 0;
+
+			//printf("Thread %d: Trying word.. %s\n", args->thread_id, word);
+
+			int guess = compare_hashes(args->hash, word);
+			if(guess == 0) { 
+				printf("Success! found a match: %s\n", word); 
+				found = 1;
+				pthread_exit(&found);
+			}
+		} 
+		else {
+			word_char++;
+		}
+	}
+	pthread_exit(&found);
+}
+
+int guess_from_dictionary_mmap(char* hash, int num_threads) {
+
+	int file_descriptor = open("./dicts/dictionary.txt", O_RDONLY, S_IRUSR | S_IWUSR);
+	struct stat file_info;
+
+	if(fstat(file_descriptor, &file_info) == -1) {
+		printf("Error: Couldnt get file size. Aborting..\n");
+		return -1;
+	}
+
+	char* file_in_memory = mmap(NULL, file_info.st_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0);
+
+	struct d_mmap_struct args[num_threads];
+	pthread_t pthread_ids[num_threads];
+
+	//arg[i].end = (i == num_thread-1) ?((chunk*(i+1)) + st.st_size%num_thread) : chunk*(i+1);
+	int chunk = (file_info.st_size / num_threads);
+
+	// make 1 thread for test:
+	for(int i = 0; i < num_threads; i++) { 
+		args[i].thread_id = i;
+		args[i].hash = hash;
+		args[i].read_from = chunk * i; 
+		//args[i].read_to = chunk;
+		args[i].mmapped_str = file_in_memory;
+
+		if(i == num_threads - 1) {
+			args[i].read_to = ((chunk * (i+1)) + file_info.st_size % num_threads);
+		}
+		else {
+			args[i].read_to = chunk * (i+1);
+		}
+
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		pthread_create(&pthread_ids[i], &attr, dict_mmap_thread_runner, &args[i]);
+	}
+
+	for(int i = 0; i < num_threads; i++) {
+		pthread_join(pthread_ids[i], NULL);
+	}
+
+	//cleanup
+	munmap(file_in_memory, file_info.st_size);
+	close(file_descriptor);
+
+	return -1;
+}
+
 int main(int argc, char** argv) {
 
 	// validate input
@@ -141,6 +248,10 @@ int main(int argc, char** argv) {
 		num_threads = atoi(argv[2]);
 	}
 
+	// mmap dictionary guess
+	guess_from_dictionary_mmap(hash, num_threads);
+		return 0;
+
 	// start guessing from dictionary
 	if(guess_from_dictionary(hash, num_threads) == 0)
 		return 0;
@@ -150,6 +261,6 @@ int main(int argc, char** argv) {
 		return 0;
 
 	printf("No matches found!\n");
-	return -1;
+	return 0;
 
 }
