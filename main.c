@@ -35,68 +35,6 @@ int compare_hashes(char* in_hash, char* guess) {
 	return strncmp(in_hash, out_hash, sizeof(char)*34); // is 0 if they match
 }
 
-struct d_thr_struct {
-	int thread_id;
-	FILE* dictionary_file;
-	char* hash;
-};
-
-void* dict_thread_runner(void* arg) {
-
-	struct d_thr_struct* args = (struct d_thr_struct*) arg;
-
-	char word[60];
-
-	while(fscanf(args->dictionary_file, "%s", word) != EOF) {
-
-		if(found == 1) pthread_exit(&found); // exit if match is found already
-
-		printf("Thread %d: Trying word... %s\n",args->thread_id, word);
- 
-		if(compare_hashes(args->hash, word) == 0) {
-			printf("Thread %d: SUCCESS! Match found: %s\n", args->thread_id, word);
-			found = 1;
-			pthread_exit(&found);
-		}
-
-	}
-
-	pthread_exit(&found); // no hits
-}
-
-int guess_from_dictionary(char* hash, int num_threads) {
-
-	FILE* dictionary_file = fopen("./dicts/dictionary.txt","r");
-	if(dictionary_file == NULL) {
-		printf("Error: coudln't read dictionary file. Aborting..\n");
-		return -1;
-	}
-
-	struct d_thr_struct args[num_threads];
-	pthread_t pthread_ids[num_threads];
-
-	for(int i = 0; i < num_threads; i++) {
-		args[i].thread_id = i;
-		args[i].hash = hash;
-		args[i].dictionary_file = dictionary_file;
-
-		pthread_attr_t attr;
-		pthread_attr_init(&attr);
-		pthread_create(&pthread_ids[i], &attr, dict_thread_runner, &args[i]);
-	}
-
-	for(int i = 0; i < num_threads; i++) {
-		pthread_join(pthread_ids[i], NULL);
-	}
-
-	fclose(dictionary_file);
-
-	if(found == 1) 
-		return 0;
-
-	return -1;
-}
-
 // recursive call for bruteforce
 int recursive_guess(char* word, int char_index, char* hash, int word_length) {
 
@@ -198,15 +136,12 @@ int guess_from_dictionary_mmap(char* hash, int num_threads) {
 	struct d_mmap_struct args[num_threads];
 	pthread_t pthread_ids[num_threads];
 
-	//arg[i].end = (i == num_thread-1) ?((chunk*(i+1)) + st.st_size%num_thread) : chunk*(i+1);
 	int chunk = (file_info.st_size / num_threads);
 
-	// make 1 thread for test:
 	for(int i = 0; i < num_threads; i++) { 
 		args[i].thread_id = i;
 		args[i].hash = hash;
 		args[i].read_from = chunk * i; 
-		//args[i].read_to = chunk;
 		args[i].mmapped_str = file_in_memory;
 
 		if(i == num_threads - 1) {
@@ -252,10 +187,6 @@ int main(int argc, char** argv) {
 	guess_from_dictionary_mmap(hash, num_threads);
 		return 0;
 
-	// start guessing from dictionary
-	if(guess_from_dictionary(hash, num_threads) == 0)
-		return 0;
-	
 	// nothing? then try brute force
 	if(guess_all_combinations(hash, num_threads) == 0)
 		return 0;
