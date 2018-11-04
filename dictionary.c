@@ -5,7 +5,6 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <stdio.h>
-#include <sys/types.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <unistd.h>
@@ -15,8 +14,7 @@
 static const char DICTIONARY_DIR_PATH[40] = "./dictionaries";
 
 struct dict_struct 
-{ 
-	int thread_id;
+{
 	int read_from;
 	int read_to;
 	char* mmapped_str;
@@ -25,21 +23,21 @@ struct dict_struct
 
 void* dictionary_thread_runner(void* arg) 
 {
-
 	struct dict_struct* args = (struct dict_struct*) arg;
 
 	char word[60];
 	int word_char = 0;
 
 	// make sure we dont start our checks in the middle of a word
-	while(args->thread_id != 0 && args->mmapped_str[args->read_from] != '\n') 
+	while(args->read_from != 0 && args->mmapped_str[args->read_from] != '\n') 
 	{
 		args->read_from--;
 	}
 
 	for(int i = args->read_from; i < args->read_to; i++) 
 	{
-		if(found == 1) pthread_exit(0); 
+		if(found == 1) 
+			pthread_exit(0); 
 
 		word[word_char] = args->mmapped_str[i];
 
@@ -50,9 +48,7 @@ void* dictionary_thread_runner(void* arg)
 
 			int guess = compare_hashes(args->hash, word);
 			if(guess == 0) 
-			{ 
 				pthread_exit(0);
-			}
 		} 
 		else 
 		{
@@ -63,8 +59,7 @@ void* dictionary_thread_runner(void* arg)
 }
 
 void dictionary_thread_starter(char* hash, int num_threads, char* file_name)
-{
-		
+{	
 	printf("Attempting dictionary search with file %s...\n", file_name);
 
 	// + 2 = null terminator which strlen excludes, and then the "/" char
@@ -73,7 +68,7 @@ void dictionary_thread_starter(char* hash, int num_threads, char* file_name)
 
 	int file_descriptor = open(file_path, O_RDONLY, S_IRUSR | S_IWUSR);
 	struct stat file_info;
-	
+
 	if(fstat(file_descriptor, &file_info) == -1) 
 	{
 		printf("Error: Couldnt get file size. Aborting..\n");
@@ -84,12 +79,10 @@ void dictionary_thread_starter(char* hash, int num_threads, char* file_name)
 
 	struct dict_struct args[num_threads];
 	pthread_t pthread_ids[num_threads];
-
 	int chunk = (file_info.st_size / num_threads);
 
 	for(int i = 0; i < num_threads; i++) 
-	{ 
-		args[i].thread_id = i;
+	{
 		args[i].hash = hash;
 		args[i].mmapped_str = file_in_memory;
 		args[i].read_from = chunk * i; 
@@ -120,7 +113,6 @@ void dictionary_thread_starter(char* hash, int num_threads, char* file_name)
 
 int guess_from_dictionary(char* hash, int num_threads) 
 {
-	
 	printf("Starting dictionary search. Scanning dictionary file folder...\n");
 
 	DIR *dictionary_dir;
@@ -138,6 +130,7 @@ int guess_from_dictionary(char* hash, int num_threads)
 		// skip current/previous folder
 		if (!strcmp (dir_entry->d_name, "."))
 			continue;
+
 		if (!strcmp (dir_entry->d_name, ".."))    
 			continue;	
 
@@ -146,7 +139,8 @@ int guess_from_dictionary(char* hash, int num_threads)
 
 	closedir(dictionary_dir);
 
-	if(found == 1) return 0;
+	if(found == 1) 
+		return 0;
 
 	return -1;
 }

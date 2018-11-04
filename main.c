@@ -1,10 +1,11 @@
-#include "helper.h"
-#include "dictionary.h"
-#include "brute_force.h"
-
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+
+#include "helper.h"
+#include "dictionary.h"
+#include "brute_force.h"
 
 int main(int argc, char** argv) 
 {
@@ -24,10 +25,20 @@ int main(int argc, char** argv)
 
 	printf("Searching for hash: %s\n", hash);
 
-	/*if(guess_from_dictionary(hash, num_threads) == 0)
-		return 0;
+/*
+	while(found != 1) {
+		printf ( "\r        \r"); // \b\b\b also works but \r looks better
+		for(int i = 0; i < 3; i++) {
+			printf(".");
+			fflush ( stdout);//force printing as no newline in output
+			sleep(1);
+		}
+		sleep(2);		
+	}
 */
-	printf("Attempting brute force.. This might take a while...\n");
+	if(guess_from_dictionary(hash, num_threads) == 0)
+		return 0;
+
 	if(guess_all_combinations(hash, num_threads) == 0)
 		return 0;
 

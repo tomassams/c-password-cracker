@@ -1,7 +1,6 @@
 #define _GNU_SOURCE
 
 #include <crypt.h>
-#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 
