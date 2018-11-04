@@ -6,11 +6,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
 	
 	// validate input
 	char* hash = argv[1];
-	if(argc <= 1 || argc > 3 || strlen(hash) != 34) {
+	if(argc <= 1 || argc > 3 || strlen(hash) != 34) 
+	{
 		printf("Usage: %s <hash> <num_threads>\n", argv[0]);
 		return -1;
 	}
@@ -20,9 +22,13 @@ int main(int argc, char** argv) {
 		num_threads = atoi(argv[2]);
 	}
 
+	printf("Searching for hash: %s\n", hash);
+
+	printf("Attempting dictionary search...\n");
 	if(guess_from_dictionary(hash, num_threads) == 0)
 		return 0;
 
+	printf("Attempting brute force.. This might take a while...\n");
 	if(guess_all_combinations(hash, num_threads) == 0)
 		return 0;
 
@@ -30,4 +36,3 @@ int main(int argc, char** argv) {
 	return 0;
 
 }
-
