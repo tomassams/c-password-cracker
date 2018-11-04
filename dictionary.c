@@ -7,10 +7,14 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <dirent.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 
-struct d_mmap_struct 
+static const char DICTIONARY_DIR_PATH[40] = "./dictionaries";
+
+struct dict_struct 
 { 
 	int thread_id;
 	int read_from;
@@ -19,10 +23,10 @@ struct d_mmap_struct
 	char* hash;
 };
 
-void* dict_mmap_thread_runner(void* arg) 
+void* dictionary_thread_runner(void* arg) 
 {
 
-	struct d_mmap_struct* args = (struct d_mmap_struct*) arg;
+	struct dict_struct* args = (struct dict_struct*) arg;
 
 	char word[60];
 	int word_char = 0;
@@ -58,21 +62,26 @@ void* dict_mmap_thread_runner(void* arg)
 	pthread_exit(0);
 }
 
-int guess_from_dictionary(char* hash, int num_threads) 
+void dictionary_thread_starter(char* hash, int num_threads, char* file_name)
 {
+		
+	printf("Attempting dictionary search with file %s...\n", file_name);
 
-	int file_descriptor = open("./dicts/dictionary.txt", O_RDONLY, S_IRUSR | S_IWUSR);
+	char* file_path = calloc(strlen(DICTIONARY_DIR_PATH) + strlen(file_name) + 1, sizeof(char));
+	sprintf(file_path, "%s/%s", DICTIONARY_DIR_PATH, file_name);
+
+	int file_descriptor = open(file_path, O_RDONLY, S_IRUSR | S_IWUSR);
 	struct stat file_info;
-
+	
 	if(fstat(file_descriptor, &file_info) == -1) 
 	{
 		printf("Error: Couldnt get file size. Aborting..\n");
-		return -1;
+		exit(0);
 	}
 
 	char* file_in_memory = mmap(NULL, file_info.st_size, PROT_READ, MAP_PRIVATE, file_descriptor, 0);
 
-	struct d_mmap_struct args[num_threads];
+	struct dict_struct args[num_threads];
 	pthread_t pthread_ids[num_threads];
 
 	int chunk = (file_info.st_size / num_threads);
@@ -81,8 +90,8 @@ int guess_from_dictionary(char* hash, int num_threads)
 	{ 
 		args[i].thread_id = i;
 		args[i].hash = hash;
-		args[i].read_from = chunk * i; 
 		args[i].mmapped_str = file_in_memory;
+		args[i].read_from = chunk * i; 
 
 		if(i == num_threads - 1) 
 		{
@@ -95,7 +104,7 @@ int guess_from_dictionary(char* hash, int num_threads)
 
 		pthread_attr_t attr;
 		pthread_attr_init(&attr);
-		pthread_create(&pthread_ids[i], &attr, dict_mmap_thread_runner, &args[i]);
+		pthread_create(&pthread_ids[i], &attr, dictionary_thread_runner, &args[i]);
 	}
 
 	for(int i = 0; i < num_threads; i++) 
@@ -105,7 +114,37 @@ int guess_from_dictionary(char* hash, int num_threads)
 
 	munmap(file_in_memory, file_info.st_size);
 	close(file_descriptor);
+	free(file_path);
+}
+
+int guess_from_dictionary(char* hash, int num_threads) 
+{
 	
+	printf("Starting dictionary search. Scanning dictionary file folder...\n");
+
+	DIR *dictionary_dir;
+    struct dirent* dir_entry;
+
+    dictionary_dir = opendir(DICTIONARY_DIR_PATH);
+	if(dictionary_dir == NULL) 
+	{
+		printf("Couldn't open dictionary file directory (%s). Aborting..\n", DICTIONARY_DIR_PATH);
+		exit(0);
+	}
+	
+	while ((dir_entry = readdir(dictionary_dir)) != NULL)
+	{
+		// skip current/previous folder
+		if (!strcmp (dir_entry->d_name, "."))
+			continue;
+		if (!strcmp (dir_entry->d_name, ".."))    
+			continue;	
+
+		dictionary_thread_starter(hash, num_threads, dir_entry->d_name);
+	}
+
+	closedir(dictionary_dir);
+
 	if(found == 1) return 0;
 
 	return -1;

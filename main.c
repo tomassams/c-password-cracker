@@ -24,7 +24,6 @@ int main(int argc, char** argv)
 
 	printf("Searching for hash: %s\n", hash);
 
-	printf("Attempting dictionary search...\n");
 	if(guess_from_dictionary(hash, num_threads) == 0)
 		return 0;
 
