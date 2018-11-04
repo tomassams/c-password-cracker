@@ -1,15 +1,14 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+// #include <unistd.h> // for loading dots...
 
 #include "helper.h"
 #include "dictionary.h"
 #include "brute_force.h"
 
 int main(int argc, char** argv) 
-{
-	
+{	
 	// validate input
 	char* hash = argv[1];
 	if(argc <= 1 || argc > 3 || strlen(hash) != 34) 
@@ -44,5 +43,4 @@ int main(int argc, char** argv)
 
 	printf("No matches found!\n");
 	return 0;
-
 }

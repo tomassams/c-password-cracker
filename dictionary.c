@@ -1,6 +1,3 @@
-#include "helper.h"
-#include "dictionary.h"
-
 #include <pthread.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -10,6 +7,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "helper.h"
+#include "dictionary.h"
 
 static const char DICTIONARY_DIR_PATH[40] = "./dictionaries";
 
