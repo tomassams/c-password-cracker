@@ -24,9 +24,9 @@ int main(int argc, char** argv)
 
 	printf("Searching for hash: %s\n", hash);
 
-	if(guess_from_dictionary(hash, num_threads) == 0)
+	/*if(guess_from_dictionary(hash, num_threads) == 0)
 		return 0;
-
+*/
 	printf("Attempting brute force.. This might take a while...\n");
 	if(guess_all_combinations(hash, num_threads) == 0)
 		return 0;

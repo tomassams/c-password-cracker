@@ -67,7 +67,8 @@ void dictionary_thread_starter(char* hash, int num_threads, char* file_name)
 		
 	printf("Attempting dictionary search with file %s...\n", file_name);
 
-	char* file_path = calloc(strlen(DICTIONARY_DIR_PATH) + strlen(file_name) + 1, sizeof(char));
+	// + 2 = null terminator which strlen excludes, and then the "/" char
+	char* file_path = calloc(strlen(DICTIONARY_DIR_PATH) + strlen(file_name) + 2, sizeof(char)); 
 	sprintf(file_path, "%s/%s", DICTIONARY_DIR_PATH, file_name);
 
 	int file_descriptor = open(file_path, O_RDONLY, S_IRUSR | S_IWUSR);
@@ -132,7 +133,7 @@ int guess_from_dictionary(char* hash, int num_threads)
 		exit(0);
 	}
 	
-	while ((dir_entry = readdir(dictionary_dir)) != NULL)
+	while (found != 1 && (dir_entry = readdir(dictionary_dir)) != NULL)
 	{
 		// skip current/previous folder
 		if (!strcmp (dir_entry->d_name, "."))

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <pthread.h>
 
 #include "helper.h"
@@ -50,12 +51,13 @@ void* brute_thread_runner(void* arg)
 
 	for(int i = 0; i < MAX_WORD_LENGTH; i++) 
 	{
-		char word[MAX_WORD_LENGTH+1]; // TODO: should this init to 0 or be set to i+1?
+		char* word = calloc(MAX_WORD_LENGTH + 1, sizeof(char));
 
 		for(int j = args->start; j < args->end; j++) 
 		{
 			if(found == 1) 
 			{
+				free(word);
 				pthread_exit(0);
 			}
 
@@ -63,15 +65,18 @@ void* brute_thread_runner(void* arg)
 
 			if(compare_hashes(args->hash, word) == 0) 
 			{
+				free(word);
 				pthread_exit(0);
 			}
 
 			int guess = brute_recursive(word, args->hash, 1, i);
 			if(guess == 0) 
 			{
+				free(word);
 				pthread_exit(0);
 			}
 		}	
+		free(word);
 	}
 	pthread_exit(0);
 	
