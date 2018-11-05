@@ -1,5 +1,5 @@
 TARGET = cracker
-CFLAGS = -Wall -Wextra -lcrypt -pthread
+CFLAGS = -Wall -Wextra -lcrypt -pthread -std=c11
 CC = gcc
 
 $(TARGET): brute_force.o dictionary.o helper.o main.o

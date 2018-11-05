@@ -1,9 +1,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-// #include <unistd.h> // for loading dots...
 
-#include "helper.h"
 #include "dictionary.h"
 #include "brute_force.h"
 
@@ -24,22 +22,13 @@ int main(int argc, char** argv)
 
 	printf("Searching for hash: %s\n", hash);
 
-/*
-	while(found != 1) {
-		printf ( "\r        \r"); // \b\b\b also works but \r looks better
-		for(int i = 0; i < 3; i++) {
-			printf(".");
-			fflush ( stdout);//force printing as no newline in output
-			sleep(1);
-		}
-		sleep(2);		
-	}
-*/
-	if(guess_from_dictionary(hash, num_threads) == 0)
-		return 0;
+	if(guess_from_dictionary(hash, num_threads) == 1)
+		return 1;
 
-	if(guess_all_combinations(hash, num_threads) == 0)
-		return 0;
+	printf("Dictionary search returned no hits...\n");
+
+	if(guess_all_combinations(hash, num_threads) == 1)
+		return 1;
 
 	printf("No matches found!\n");
 	return 0;

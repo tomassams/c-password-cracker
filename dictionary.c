@@ -11,7 +11,7 @@
 #include "helper.h"
 #include "dictionary.h"
 
-static const char DICTIONARY_DIR_PATH[40] = "./dictionaries";
+static const char DICTIONARY_DIR_PATH[] = "./dictionaries";
 
 struct dict_struct 
 {
@@ -34,35 +34,35 @@ void* dictionary_thread_runner(void* arg)
 		args->read_from--;
 	}
 
-	for(int i = args->read_from; i < args->read_to; i++) 
+	for(int i = args->read_from; i < args->read_to; i++)
 	{
-		if(found == 1) 
-			pthread_exit(0); 
+		if(found == 1)
+			break;
 
 		word[word_char] = args->mmapped_str[i];
 
 		if(args->mmapped_str[i] == '\n') 
-		{	
+		{
 			word[word_char] = '\0';
 			word_char = 0;
 
 			int guess = compare_hashes(args->hash, word);
-			if(guess == 0) 
-				pthread_exit(0);
-		} 
-		else 
+			if(guess == 1) 
+				break;
+		}
+		else
 		{
 			word_char++;
 		}
 	}
-	pthread_exit(0);
+	return NULL;
 }
 
 void dictionary_thread_starter(char* hash, int num_threads, char* file_name)
 {	
 	printf("Attempting dictionary search with file %s...\n", file_name);
 
-	// + 2 = null terminator which strlen excludes, and then the "/" char
+	// + 2 for null terminator (which strlen excludes) and the "/" char
 	char* file_path = calloc(strlen(DICTIONARY_DIR_PATH) + strlen(file_name) + 2, sizeof(char)); 
 	sprintf(file_path, "%s/%s", DICTIONARY_DIR_PATH, file_name);
 
@@ -91,7 +91,7 @@ void dictionary_thread_starter(char* hash, int num_threads, char* file_name)
 		{
 			args[i].read_to = ((chunk * (i+1)) + file_info.st_size % num_threads);
 		}
-		else 
+		else
 		{
 			args[i].read_to = chunk * (i+1);
 		}
@@ -121,7 +121,7 @@ int guess_from_dictionary(char* hash, int num_threads)
     dictionary_dir = opendir(DICTIONARY_DIR_PATH);
 	if(dictionary_dir == NULL) 
 	{
-		printf("Couldn't open dictionary file directory (%s). Aborting..\n", DICTIONARY_DIR_PATH);
+		printf("Erorr: Couldn't open dictionary file directory (%s). Aborting..\n", DICTIONARY_DIR_PATH);
 		exit(0);
 	}
 	
@@ -139,8 +139,5 @@ int guess_from_dictionary(char* hash, int num_threads)
 
 	closedir(dictionary_dir);
 
-	if(found == 1) 
-		return 0;
-
-	return -1;
+	return found;
 }

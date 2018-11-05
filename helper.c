@@ -25,8 +25,7 @@ int compare_hashes(char* in_hash, char* guess)
 	{
 		printf("SUCCESS! Password found: %s\n", guess);
 		found = 1;
-		return 0;
 	}
 
-	return -1;
+	return found;
 }

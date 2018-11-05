@@ -6,10 +6,11 @@
 #include "brute_force.h"
 
 static const char PASSCHARS[] = "abcdefghikjlmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890+\"#&/()=?!@$|[]|{}";
-static const int  PASSCHARS_SIZE = sizeof(PASSCHARS) -1; // because 1 char is 1 byte
+static const int  PASSCHARS_SIZE = sizeof(PASSCHARS) -1;
 static const int  MAX_WORD_LENGTH = 4; 
 
-struct brute_struct {
+struct brute_struct
+{
 	char* hash;
 	int start;
 	int end;
@@ -17,55 +18,53 @@ struct brute_struct {
 
 int brute_recursive(char* word, char* hash, int c_index, int w_length) 
 {
-	
 	for(int i = 0; i < PASSCHARS_SIZE; i++) 
 	{
 		if(found == 1)
-			return 0;
-		
+			break;
+
 		word[c_index] = PASSCHARS[i];
 
-		if(compare_hashes(hash, word) == 0)
-			return 0; 
+		if(compare_hashes(hash, word) == 1)
+			break;
 
 		if(c_index < w_length)
 		{
 			int guess = brute_recursive(word, hash, c_index + 1, w_length);
-			if(guess == 0) 
-				return 0;
+			if(guess == 1)
+				break;
 		}
 	}
-
-	return -1;
+	return found;
 }
 
-void* brute_thread_runner(void* arg) 
+void* brute_thread_runner(void* arg)
 {
 	struct brute_struct* args = (struct brute_struct*) arg;
 
 	int i = 0;
-	while(i < MAX_WORD_LENGTH && found != 1)
+	while(found != 1 && i < MAX_WORD_LENGTH)
 	{
 		char* word = calloc(MAX_WORD_LENGTH + 1, sizeof(char));
 
-		for(int j = args->start; j < args->end; j++) 
+		for(int j = args->start; j < args->end; j++)
 		{
-			if(found == 1) 
+			if(found == 1)
 				break;
 
 			word[0] = PASSCHARS[j];
 
-			if(compare_hashes(args->hash, word) == 0) 
+			if(compare_hashes(args->hash, word) == 1) 
 				break;
 
 			int guess = brute_recursive(word, args->hash, 1, i);
-			if(guess == 0) 
+			if(guess == 1) 
 				break;
-		}	
+		}
 		i++;
 		free(word);
 	}
-	pthread_exit(0);
+	return NULL;
 }
 
 int guess_all_combinations(char* hash, int num_threads) 
@@ -100,8 +99,5 @@ int guess_all_combinations(char* hash, int num_threads)
 		pthread_join(pthread_ids[i], NULL);
 	}
 
-	if(found == 1) 
-		return 0; 
-
-	return -1;
+	return found;
 }
